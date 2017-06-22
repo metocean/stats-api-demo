@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title></title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src="js/bundle.js"></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+</head>
+<body>
+
+<style>
+    .calculation-box {
+        max-width: 1200px;
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background-color: rgba(255, 255, 255, .9);
+        padding: 15px;
+        text-align: center;
+    }
+
+    #stats-get {
+        min-height: 20px;
+        background-color: #3887be;
+        color: #fff;
+        font-family: 'Open Sans';
+        border-radius: 5px;
+        padding: 10px;
+        cursor: pointer;
+        margin: 15px 0;
+    }
+
+    #url-show {
+        text-align: left;
+        word-wrap: break-word;
+        min-width: 200px;
+        background-color: #eee;
+    }
+
+    #stats-show {
+        margin:10px;
+    }
+
+    p {
+        font-family: 'Open Sans';
+        margin: 0;
+        font-size: 13px;
+    }
+
+    table {
+        border-spacing: 0px;
+        border: 1px solid black;
+        font-size: small;
+    }
+
+    tr.grey {
+        background-color: #ddd;
+    }
+
+    th {
+        width: 30px;
+    }
+
+    td.header {
+        width: 50px;
+    }
+
+    th,td.header {
+        font-weight: bold;
+        border: 1px solid black;
+    }
+
+
+</style>
+<script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v0.18.0/mapbox-gl-draw.js'></script>
+<link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v0.18.0/mapbox-gl-draw.css' type='text/css'/>
+<div id='map'></div>
+
+<div class='calculation-box'>
+    <div id='stats-get' class='button button'>Get statistics</div>
+    <div id='stats-show'></div>
+    <p>Request URL:</p>
+    <div id='url-show'></div>
+</div>
+
+<script>
+HCD_SERVER="http://putunga6:5002"
+HCD_DATASET='glob'
+mapboxgl.accessToken = 'pk.eyJ1IjoibWV0b2NlYW4iLCJhIjoia1hXZjVfSSJ9.rQPq6XLE0VhVPtcD9Cfw6A';
+
+/* eslint-disable */
+var map = new mapboxgl.Map({
+    container: 'map', // container id
+    style: 'mapbox://styles/mapbox/satellite-v9', //hosted style id
+    center: [165, -40], // starting position
+    zoom: 3 // starting zoom
+});
+
+var draw = new MapboxDraw({
+    displayControlsDefault: false,
+    controls: {
+        line_string: true,
+        point: true,
+        trash: true
+    }
+});
+map.addControl(draw);
+
+make_html_table=function(data){    
+    var table = d3.select('#stats-show').append('table')
+    var thead = table.append('thead')
+    var	tbody = table.append('tbody');
+    var varkey='wave_count';
+    var dims=Object.keys(data.dims);
+    var row_header=data.data[dims[0]];
+    var rowdata=[]
+    if (dims.length>1){
+        var column_header=['m'].concat(data.data[dims[1]]);
+    }else{
+        var column_header=['m',''];
+    }
+    var maxrow=0;
+    for (var i=0;i<data.data[varkey].length;i++) {
+        rowdata.push([row_header[i]].concat(data.data[varkey][i]));
+        for (var j=1;j<rowdata[i].length;j++){
+            if (d3.max(data.data[varkey][i])>0) maxrow=i;
+            rowdata[i][j]=(100*rowdata[i][j]).toFixed(2);
+        }
+    }
+    rowdata=rowdata.splice(0,maxrow+1);
+    var vars=Object.keys(data.variables);
+    var colorscale = d3.scaleLinear()
+    .domain([0.0001,100*d3.max(d3.max(data.data[varkey]))])
+    .range(["yellow", "red"]);
+
+    // append the header row
+    thead.append('tr')
+        .selectAll('th')
+        .data(column_header).enter()
+        .append('th')
+        .text(function (column) { return column; });
+
+    // create a row for each object in the data
+    var rows = tbody.selectAll('tr')
+        .data(rowdata)
+        .enter()
+        .append('tr');
+
+    // create a cell in each row for each column
+    var cells = rows.selectAll('td')
+        .data(function (row) {
+            return row}
+        )
+        .enter()
+        .append('td')
+        .text(function (d) { 
+            return d; 
+        })
+        .style("background-color", function(d) {return (d>0) ? colorscale(d) : null});
+    d3.selectAll("tr").classed("grey",function(d,i){return i%2 == 0});
+    d3.selectAll("tr").selectAll("td").classed("header",function(d,i){return i == 0});
+}
+
+var calcButton = document.getElementById('stats-get');
+var stats = document.getElementById('stats-show');
+var urlbox = document.getElementById('url-show');
+calcButton.onclick = function() {
+    var data = draw.getSelected();
+    if (calcButton.innerHTML=="Hide statistics") {
+        stats.innerHTML="";
+        calcButton.innerHTML="Get statistics";
+    }else if (data.features.length > 0) {
+        stats.innerHTML="Fetching data...";
+        var coords=data.features[0].geometry.coordinates;
+        if (data.features[0].geometry.type=='Point') coords=[coords];
+        var lons=[];
+        var lats=[];
+        for (var i=0;i<coords.length;i++){
+            lons.push(coords[i][0].toFixed(3));
+            lats.push(coords[i][1].toFixed(3));
+        }
+        var url_request=HCD_SERVER+'/stats/'+HCD_DATASET+'/wave_count?months=0&bins=hs,tp&normalized=1&lons='+lons.join(',')+'&lats='+lats.join(',');
+        var table='';
+        client.get(url_request, function (data, response) {
+            stats.innerHTML="";
+            table=make_html_table(data);
+        });
+        urlbox.innerHTML = '<p>'+url_request+'</p>';
+        calcButton.innerHTML="Hide statistics";
+    } else {
+        stats.innerHTML='<p>Use the draw tools to draw or select a site or route<p>';
+        urlbox.innerHTML='';
+    }
+};
+
+</script>
+
+</body>
+</html>
