@@ -6,6 +6,4 @@ var options = {
     }
 };
 var client=new Client(options);
-
-
-
+var selectpicker = require('bootstrap-select');

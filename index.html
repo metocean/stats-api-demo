@@ -7,14 +7,20 @@
     <script src="js/bundle.js"></script>
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.js'></script>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v0.18.0/mapbox-gl-draw.js'></script>
+    <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v0.18.0/mapbox-gl-draw.css' type='text/css'/>
     <style>
         body { margin:0; padding:0; }
         #map { position:absolute; top:0; bottom:0; width:100%; }
     </style>
-</head>
-<body>
+    <link rel="stylesheet" type="text/css" href="js/semantic/dist/semantic.min.css">
+    <script
+    src="https://code.jquery.com/jquery-3.1.1.min.js"
+    integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+    crossorigin="anonymous"></script>
+    <script src="js/semantic/dist/semantic.min.js"></script>
 
-<style>
+    <style>
     .calculation-box {
         max-width: 1200px;
         position: absolute;
@@ -23,6 +29,7 @@
         background-color: rgba(255, 255, 255, .9);
         padding: 15px;
         text-align: center;
+        z-index: 10;
     }
 
     #stats-get {
@@ -81,12 +88,40 @@
 
 
 </style>
-<script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v0.18.0/mapbox-gl-draw.js'></script>
-<link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v0.18.0/mapbox-gl-draw.css' type='text/css'/>
+</head>
+
+<body>
 <div id='map'></div>
 
 <div class='calculation-box'>
-    <div id='stats-get' class='button button'>Get statistics</div>
+    <button id="stats-get" class="ui button">Get statistics</button>
+    <form class="ui form">
+    <div class="two fields">
+    <div class="field"><label for="month">Months:</label>
+    <select name="month" id="month" multiple="True">
+        <option value="">All</option>
+        <option value="1">January</option>
+        <option value="2">February</option>
+        <option value="3">March</option>
+        <option value="4">April</option>
+        <option value="5">May</option>
+        <option value="6">June</option>
+        <option value="7">July</option>
+        <option value="8">August</option>
+        <option value="9">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+    </select></div>
+    <div class="field"><label for="param">Parameter:</label>
+    <select name="param" id="param">
+        <option value="wave_count?bins=hs,tp" selected="1">Wave height and period</option>
+        <option value="wave_count?bins=hs,dir" >Wave height and direction</option>
+        <option value="wind_count?bins=wsp,dir" >Wind speed and direction</option>
+        <option value="hs-max" >Maximum wave height</option>
+    </select></div>
+    </div>
+    </form>
     <div id='stats-show'></div>
     <p>Request URL:</p>
     <div id='url-show'></div>
@@ -115,14 +150,20 @@ var draw = new MapboxDraw({
 });
 map.addControl(draw);
 
-make_html_table=function(data){    
+$month_selector=$("#month").dropdown({
+    allowAdditions: true
+});
+
+$param_selector=$("#param").dropdown({
+});
+
+make_html_table=function(data,varkey){    
     var table = d3.select('#stats-show').append('table')
     var thead = table.append('thead')
     var	tbody = table.append('tbody');
-    var varkey='wave_count';
     var dims=Object.keys(data.dims);
     var row_header=data.data[dims[0]];
-    var rowdata=[]
+    var rowdata=[];
     if (dims.length>1){
         var column_header=['m'].concat(data.data[dims[1]]);
     }else{
@@ -173,13 +214,19 @@ make_html_table=function(data){
 var calcButton = document.getElementById('stats-get');
 var stats = document.getElementById('stats-show');
 var urlbox = document.getElementById('url-show');
-calcButton.onclick = function() {
+get_stats = function() {
     var data = draw.getSelected();
+    var months=[];
+    $month_selector.find(":selected").each(function(){
+        months.push($(this).val());
+    });
+    if (months.length<1) months=['0'];
+    var params=$param_selector.find(":selected").val();
     if (calcButton.innerHTML=="Hide statistics") {
-        stats.innerHTML="";
-        calcButton.innerHTML="Get statistics";
+        $('#stats-show').html("");
+        $('#stats-get').html("Get statistics");
     }else if (data.features.length > 0) {
-        stats.innerHTML="Fetching data...";
+        $('#stats-show').html("Fetching data...");
         var coords=data.features[0].geometry.coordinates;
         if (data.features[0].geometry.type=='Point') coords=[coords];
         var lons=[];
@@ -188,20 +235,23 @@ calcButton.onclick = function() {
             lons.push(coords[i][0].toFixed(3));
             lats.push(coords[i][1].toFixed(3));
         }
-        var url_request=HCD_SERVER+'/stats/'+HCD_DATASET+'/wave_count?months=0&bins=hs,tp&normalized=1&lons='+lons.join(',')+'&lats='+lats.join(',');
+        var url_request=HCD_SERVER+'/stats/'+HCD_DATASET+'/'+params+'&months='+months.join(',')+'&normalized=1&lons='+lons.join(',')+'&lats='+lats.join(',');
         var table='';
+        var varkey=params.split('?')[0];
         client.get(url_request, function (data, response) {
             stats.innerHTML="";
-            table=make_html_table(data);
+            table=make_html_table(data,varkey);
         });
-        urlbox.innerHTML = '<p>'+url_request+'</p>';
-        calcButton.innerHTML="Hide statistics";
+        $('#url-show').html('<p>'+url_request+'</p>');
+        $('#stats-get').html("Hide statistics");
     } else {
-        stats.innerHTML='<p>Use the draw tools to draw or select a site or route<p>';
-        urlbox.innerHTML='';
+        $('#stats-show').html('<p>Use the draw tools to draw or select a site or route<p>');
+        $('#url-show').html("");
     }
 };
-
+$('#stats-get').on('click',get_stats);
+$month_selector.on('change',get_stats);
+$param_selector.on('change',get_stats);
 </script>
 
 </body>
