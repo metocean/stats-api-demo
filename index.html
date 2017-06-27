@@ -102,7 +102,16 @@
     <button id="stats-get" class="ui button">Get API response</button>
     <form class="ui form">
     <div class="two fields">
-    <div class="field"><label for="month">Months:</label>
+    <div class="field"><label for="param">Parameter:</label>
+    <select name="param" id="param">
+        <option value="wave_count?bins=hs,tp" selected="1">Wave height and period</option>
+        <option value="wave_count?bins=hs,dir" >Wave height and direction</option>
+        <option value="wave_count?bins=tp,dir" >Wave period and direction</option>
+        <option value="wind_count?bins=wsp,dir" >Wind speed and direction</option>
+        <option value="hs-max?a" >Maximum wave height</option>
+        <option value="wsp-max?a" >Maximum wind speed</option>
+    </select></div>
+    <div class="field" id="month-select"><label for="month">Months:</label>
     <select name="month" id="month" multiple="True">
         <option value="">All</option>
         <option value="1">January</option>
@@ -117,14 +126,6 @@
         <option value="10">October</option>
         <option value="11">November</option>
         <option value="12">December</option>
-    </select></div>
-    <div class="field"><label for="param">Parameter:</label>
-    <select name="param" id="param">
-        <option value="wave_count?bins=hs,tp" selected="1">Wave height and period</option>
-        <option value="wave_count?bins=hs,dir" >Wave height and direction</option>
-        <option value="wave_count?bins=tp,dir" >Wave period and direction</option>
-        <option value="wind_count?bins=wsp,dir" >Wind speed and direction</option>
-        <option value="hs-max" >Maximum wave height</option>
     </select></div>
     </div>
     </form>
@@ -182,16 +183,14 @@ make_html_table=function(data,varkey){
     var row_units=data.variables[dims[0]].attributes['units'];
     if (dims.length>1){
         var column_header=[row_units].concat(data.data[dims[1]]);
+        var column_units=data.variables[dims[1]].attributes['units'];
     }else{
         var column_header=[row_units,''];
-        var column_units=data.variables[dims[1]].attributes['units'];
     }
     var maxrow=0;
     for (var i=0;i<data.data[varkey].length;i++) {
         rowdata.push([row_header[i]].concat(data.data[varkey][i]));
-        for (var j=1;j<rowdata[i].length;j++){
-            if (d3.max(data.data[varkey][i])>0) maxrow=i;
-        }
+        if (data.data[varkey][i]>0. || d3.sum(data.data[varkey][i])>0) maxrow=i;
     }
     rowdata=rowdata.splice(0,maxrow+1);
     var vars=Object.keys(data.variables);
@@ -213,16 +212,26 @@ make_html_table=function(data,varkey){
         .append('tr');
 
     // create a cell in each row for each column
-    var cells = rows.selectAll('td')
-        .data(function (row) {
-            return row}
-        )
-        .enter()
-        .append('td')
-        .text(function (d,i) { 
-            return (i>0) ? (100*d).toFixed(2) : d; 
-        })
-        .style("background-color", function(d) {return (d>0) ? colorscale(d) : null});
+    if (varkey.indexOf('count')>0) {
+        var cells = rows.selectAll('td')
+            .data(function (row) {
+                return row}
+            )
+            .enter()
+            .append('td')
+            .text(function (d,i) { 
+                return (i>0) ? (100*d).toFixed(2) : d; 
+            })
+            .style("background-color", function(d) {return (d>0) ? colorscale(d) : null});
+    }else{
+        var cells = rows.selectAll('td')
+            .data(function (row) {
+                return row}
+            )
+            .enter()
+            .append('td')
+            .text(function (d) { return d });
+    }
     d3.selectAll("tr").classed("grey",function(d,i){return i%2 == 0});
     d3.selectAll("tr").selectAll("td").classed("header",function(d,i){return i == 0});
     if (varkey.indexOf('count')>0) $('#table-show').append('Values in table shown as percentages');
@@ -271,7 +280,14 @@ get_stats = function() {
 };
 $('#stats-get').on('click',get_stats);
 $month_selector.on('change',get_stats);
-$param_selector.on('change',get_stats);
+$param_selector.on('change',function(){
+    if ($(this).find(':selected').val().indexOf('count')>0) {
+        $('#month-select').show();
+    }else{
+        $('#month-select').hide();
+    }
+    get_stats();
+});
 $('#response').hide();
 $('.toggle').on('change',function(state){
         $('#table-show').toggle();
