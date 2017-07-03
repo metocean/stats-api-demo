@@ -50,7 +50,7 @@
         background-color: #ddd;
         padding: 2px;
         max-width: 500px;
-        margin: 0 auto;
+        margin-top: 10px;
     }
 
     #table-show {
@@ -137,15 +137,16 @@
     </div>
     <div id='table-show'></div>
     <div id='response-show'></div>
+    <div id='disclaimer'>***Data only suitable for testing and development purposes.***</div>
     </div>
+    <hr>
     <p>Request URL:</p>
     <div id='url-show'></div>
 </div>
 
 <script>
 HCD_SERVER="https://stats.metoceanapi.com"
-//HCD_SERVER="http://localhost:5000"
-HCD_DATASET='glob'
+HCD_DATASET='test'
 mapboxgl.accessToken = 'pk.eyJ1IjoibWV0b2NlYW4iLCJhIjoia1hXZjVfSSJ9.rQPq6XLE0VhVPtcD9Cfw6A';
 
 /* eslint-disable */
@@ -255,14 +256,18 @@ get_stats = function() {
         $('#table-show').html("Fetching data...");
         $('#response-show').html("");
         var coords=data.features[0].geometry.coordinates;
-        if (data.features[0].geometry.type=='Point') coords=[coords];
+        if (data.features[0].geometry.type=='Point') {
+            coords=[coords];
+        }else{
+            var routearg='&route=1'
+        }
         var lons=[];
         var lats=[];
         for (var i=0;i<coords.length;i++){
             lons.push(coords[i][0].toFixed(3));
             lats.push(coords[i][1].toFixed(3));
         }
-        var url_request=HCD_SERVER+'/stats/'+HCD_DATASET+'/'+params+'&months='+months.join(',')+'&normalized=1&lons='+lons.join(',')+'&lats='+lats.join(',');
+        var url_request=HCD_SERVER+'/stats/'+HCD_DATASET+'/'+params+'&months='+months.join(',')+'&normalized=1&lons='+lons.join(',')+'&lats='+lats.join(',')+routearg;
         var table='';
         var json='';
         var varkey=params.split('?')[0];
