@@ -179,11 +179,11 @@ make_html_table=function(data,varkey){
     var thead = table.append('thead');
     var	tbody = table.append('tbody');
     var dims=Object.keys(data.dims);
-    var row_header=data.data[dims[0]];
+    var row_header=data.data[dims[0]+'_labels'];
     var rowdata=[];
     var row_units=data.variables[dims[0]].attributes['units'];
     if (dims.length>1){
-        var column_header=[row_units].concat(data.data[dims[1]]);
+        var column_header=[row_units].concat(data.data[dims[1]+'_labels']);
         var column_units=data.variables[dims[1]].attributes['units'];
     }else{
         var column_header=[row_units,''];
@@ -258,6 +258,7 @@ get_stats = function() {
         var coords=data.features[0].geometry.coordinates;
         if (data.features[0].geometry.type=='Point') {
             coords=[coords];
+            var routearg='';
         }else{
             var routearg='&route=1'
         }
