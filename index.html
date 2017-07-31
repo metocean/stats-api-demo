@@ -147,6 +147,7 @@
 <script>
 HCD_SERVER="https://stats.metoceanapi.com"
 HCD_DATASET='test'
+STATSAPIKEY='b5404f78e8e84612ab746df11a7dd529';
 mapboxgl.accessToken = 'pk.eyJ1IjoibWV0b2NlYW4iLCJhIjoia1hXZjVfSSJ9.rQPq6XLE0VhVPtcD9Cfw6A';
 
 /* eslint-disable */
@@ -268,7 +269,7 @@ get_stats = function() {
             lons.push(coords[i][0].toFixed(3));
             lats.push(coords[i][1].toFixed(3));
         }
-        var url_request=HCD_SERVER+'/stats/'+HCD_DATASET+'/'+params+'&months='+months.join(',')+'&normalized=1&lons='+lons.join(',')+'&lats='+lats.join(',')+routearg;
+        var url_request=HCD_SERVER+'/stats/'+HCD_DATASET+'/'+params+'&months='+months.join(',')+'&normalized=1&lons='+lons.join(',')+'&lats='+lats.join(',')+routearg+'&apikey='+STATSAPIKEY;
         var table='';
         var json='';
         var varkey=params.split('?')[0];
