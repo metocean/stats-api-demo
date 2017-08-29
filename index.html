@@ -2,25 +2,26 @@
 <html>
 <head>
     <meta charset='utf-8' />
-    <title></title>
+    <title>Hindcast Stats API demo</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-    <script src="js/bundle.js"></script>
     <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.js'></script>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.38.0/mapbox-gl.css' rel='stylesheet' />
     <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v0.18.0/mapbox-gl-draw.js'></script>
     <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v0.18.0/mapbox-gl-draw.css' type='text/css'/>
-    <style>
-        body { margin:0; padding:0; }
-        #map { position:absolute; top:0; bottom:0; width:100%; }
-    </style>
-    <link rel="stylesheet" type="text/css" href="js/semantic/dist/semantic.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.13/semantic.min.css">
     <script
     src="https://code.jquery.com/jquery-3.1.1.min.js"
     integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
     crossorigin="anonymous"></script>
-    <script src="js/semantic/dist/semantic.min.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.13/semantic.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.10.0/d3.min.js"></script>
     <style>
+    body { margin:0; padding:0; }
+        
+    #map { position:absolute; top:0; bottom:0; width:100%; }
+
     .calculation-box {
         max-width: 1200px;
         position: absolute;
@@ -57,7 +58,7 @@
         margin:10px;
     }
 
-    #help{
+    .alert{
         color: red;
     }
 
@@ -129,7 +130,7 @@
     </select></div>
     </div>
     </form>
-    <div id="help"><p>Use the draw tools to draw or select a site or route<p></div>
+    <div id="help" class="alert"><p>Use the draw tools to draw or select a site or route<p></div>
     <div id='response'>
     <div class="ui toggle checkbox">
         <input type="checkbox" name="public">
@@ -137,7 +138,7 @@
     </div>
     <div id='table-show'></div>
     <div id='response-show'></div>
-    <div id='disclaimer'>***Data only suitable for testing and development purposes.***</div>
+    <div id='disclaimer' class="alert">***This is bogus test data  - only suitable for testing and development purposes.***</div>
     </div>
     <hr>
     <p>Request URL:</p>
@@ -273,7 +274,7 @@ get_stats = function() {
         var table='';
         var json='';
         var varkey=params.split('?')[0];
-        client.get(url_request, function (data, response) {
+        $.getJSON(url_request, function (data) {
             $('#table-show').html("");
             json = JSON.stringify(data, undefined, 2);
             table=make_html_table(data,varkey);
